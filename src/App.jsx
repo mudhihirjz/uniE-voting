@@ -29,6 +29,7 @@ function Icon({ name, size = 20 }) {
     cap: <><path d="m2 9 10-5 10 5-10 5L2 9Z" /><path d="M6 11v5c3.5 2.5 8.5 2.5 12 0v-5M21 10v6" /></>,
     menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    back: <><path d="M19 12H5M12 19l-7-7 7-7" /></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></>,
     users: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1" /></>,
     file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h8" /></>,
@@ -239,6 +240,10 @@ function App() {
         <Brand />
         <div className="header-right">
           {page !== "home" && renderElectionState()}
+          {page !== "home" && <>
+            <button className="header-page-action" type="button" aria-label="Back to portal" onClick={() => navigate("home")}><Icon name="back" size={17} /><span>Back</span></button>
+            <button className="header-page-action header-logout" type="button" aria-label="Logout" onClick={logout}><Icon name="logout" size={17} /><span>Logout</span></button>
+          </>}
           <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label={menuOpen ? "Close role menu" : "Open role menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <Icon name={menuOpen ? "close" : "menu"} />
           </button>
@@ -250,6 +255,7 @@ function App() {
         </div>
       </header>
 
+      <div className="main-wrapper">
       {page === "home" && (
         <main id="home">
           <section className="hero">
@@ -279,7 +285,7 @@ function App() {
 
       {page === "application" && (
         <main className="subpage">
-          <div className="subpage-heading"><button className="back-link" onClick={() => navigate("home")}>← Back to home</button><p className="eyebrow eyebrow--blue">CANDIDATE APPLICATION</p><h1>Stand for something.</h1><p>Tell your fellow students why you’re the right person to represent them.</p></div>
+          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">CANDIDATE APPLICATION</p><h1>Stand for something.</h1><p>Tell your fellow students why you’re the right person to represent them.</p></div>
           {appClosed ? <div className="notice-card"><span className="notice-icon"><Icon name="clock" /></span><div><strong>Applications are closed</strong><p>The application period has ended. The candidate portal is now available.</p></div><button className="button button--primary" onClick={() => navigate("candidate")}>Candidate portal</button></div> : (
             <form className="form-card application-form" onSubmit={submitApplication}>
               <div className="form-card-heading"><span className="icon-tile"><Icon name="file" /></span><div><h2>Candidate application</h2><p>All fields marked * are required.</p></div><span className="deadline-chip"><Icon name="clock" size={15} /> Closes {formatDate(applicationDeadline, { dateStyle: "medium" })}</span></div>
@@ -298,7 +304,7 @@ function App() {
 
       {page === "candidate" && (
         <main className="subpage">
-          <div className="subpage-heading"><button className="back-link" onClick={() => navigate("home")}>← Back to home</button><p className="eyebrow eyebrow--blue">CANDIDATE PORTAL</p><h1>Your campaign starts here.</h1><p>Review your application status and keep your election information close.</p></div>
+          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">CANDIDATE PORTAL</p><h1>Your campaign starts here.</h1><p>Review your application status and keep your election information close.</p></div>
           <section className="candidate-portal-card">
             <div className="portal-banner"><span className="portal-trophy"><Icon name="trophy" size={25} /></span><div><span>APPLICATION PERIOD {appClosed ? "HAS ENDED" : "IS OPEN"}</span><strong>{appClosed ? "Candidate portal" : "Candidate information"}</strong></div></div>
             {application ? <div className="portal-details"><div className="portal-status"><span className={application.status === "Approved" ? "approved-dot" : application.status === "Rejected" ? "rejected-dot" : "pending-dot"} /><div><strong>{application.status === "Approved" ? "Application approved" : application.status === "Rejected" ? "Application not approved" : "Application under review"}</strong><small>{application.status === "Approved" ? "You are registered as a candidate." : "The NEC will update your status after reviewing your application."}</small></div></div><dl><div><dt>Name</dt><dd>{application.name}</dd></div><div><dt>Student ID</dt><dd>{application.studentId}</dd></div><div><dt>Position</dt><dd>{application.position}</dd></div><div><dt>Status</dt><dd><span className="table-status">{application.status}</span></dd></div></dl></div> : <div className="empty-candidate"><span className="empty-icon"><Icon name="users" size={24} /></span><h2>No application found</h2><p>{appClosed ? "The application period has ended and there is no application attached to this session." : "Submit your application before the deadline to see your candidate profile here."}</p>{!appClosed && <button className="button button--primary" onClick={() => navigate("application")}>Apply to be a candidate</button>}</div>}
@@ -310,7 +316,7 @@ function App() {
 
       {page === "vote" && (
         <main className="subpage">
-          <div className="subpage-heading"><button className="back-link" onClick={() => navigate("home")}>← Back to home</button><p className="eyebrow eyebrow--blue">VOTER PORTAL</p><h1>Your vote matters.</h1><p>Make your choice for each position. Your ballot is private.</p></div>
+          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">VOTER PORTAL</p><h1>Your vote matters.</h1><p>Make your choice for each position. Your ballot is private.</p></div>
           {electionState !== "live" ? <section className="vote-unavailable"><span className="icon-tile"><Icon name={electionState === "ended" ? "check" : "clock"} size={22} /></span><h2>{electionState === "ended" ? "Voting has ended" : electionState === "cancelled" ? "Election cancelled" : "The polls aren’t open yet"}</h2><p>{electionState === "upcoming" ? `Voting opens ${formatDate(schedule.start)}. You can return here when the countdown ends.` : electionState === "cancelled" ? "The NEC will publish an updated election schedule." : "Thank you for participating in this election."}</p>{electionState === "upcoming" && <Countdown target={schedule.start} now={now} />}</section> : hasVoted ? <section className="vote-success"><span><Icon name="check" size={28} /></span><h2>Your vote has been recorded.</h2><p>Thank you for making your voice heard. Your ballot has been submitted securely.</p><button className="button button--outline" onClick={() => navigate("home")}>Back to home</button></section> : <form className="form-card ballot-form" onSubmit={castVote}><div className="ballot-heading"><span className="live-pill"><i /> Voting is live</span><h2>Choose your Student President</h2><p>Select one candidate. You can only submit your ballot once.</p></div><div className="ballot-options">{candidates.map((candidate) => <label className={`ballot-option${voteChoice === candidate.name ? " is-selected" : ""}`} key={candidate.name}><input type="radio" name="candidate" value={candidate.name} checked={voteChoice === candidate.name} onChange={(event) => setVoteChoice(event.target.value)} required /><span className={`avatar avatar--${candidate.color}`}>{candidate.initials}</span><span className="candidate-info"><strong>{candidate.name}</strong><small>{candidate.position}</small></span><span className="radio-mark" /></label>)}</div><div className="form-footer"><span><Icon name="shield" size={16} /> Your selection is private.</span><button className="button button--primary" type="submit">Submit my vote <Icon name="arrow" size={17} /></button></div></form>}
         </main>
       )}
@@ -324,7 +330,7 @@ function App() {
             <button className="sidebar-link sidebar-logout" onClick={logout}><Icon name="logout" size={17} />Logout</button>
           </aside>
           <section className="admin-main">
-            <div className="admin-topbar"><div><p className="eyebrow eyebrow--blue">UNIVERSITY ELECTIONS</p><h1>{adminTab}</h1></div><button className="admin-home-button" onClick={() => navigate("home")}>View public portal <Icon name="arrow" size={16} /></button></div>
+            <div className="admin-topbar"><div><p className="eyebrow eyebrow--blue">UNIVERSITY ELECTIONS</p><h1>{adminTab}</h1></div></div>
             {notice && <p className="inline-notice" role="status">{notice}</p>}
             {adminTab !== "Overview" && <TrendPanel votes={votes} compact />}
             {adminTab === "Overview" && <div className="admin-dashboard">
@@ -340,7 +346,8 @@ function App() {
           </section>
         </main>
       )}
-      {page !== "admin" && page !== "home" && <footer className="simple-footer"><span>University E-Voting</span><span>Your voice. Our university.</span><button onClick={() => navigate("admin")}>NEC admin <Icon name="arrow" size={14} /></button></footer>}
+      </div>
+      {page !== "home" && <footer className="simple-footer"><span>University E-Voting</span><span>Your voice. Our university.</span>{page === "admin" ? <span>© 2026</span> : <button onClick={() => navigate("admin")}>NEC admin <Icon name="arrow" size={14} /></button>}</footer>}
     </div>
   );
 }

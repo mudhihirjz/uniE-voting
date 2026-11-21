@@ -22,7 +22,8 @@ button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #9a92ff; outline-offset: 3px; }
-.app-shell { min-height: 100vh; position: relative; display: flex; flex-direction: column; background: #f7f8fc; }
+.app-shell { min-height: 100vh; min-height: 100svh; position: relative; display: flex; flex-direction: column; background: #f7f8fc; }
+.main-wrapper { width: 100%; min-height: 0; display: flex; flex: 1 0 auto; flex-direction: column; }
 .site-header { height: 82px; position: relative; z-index: 30; display: flex; justify-content: space-between; align-items: center; padding: 0 max(5.2vw, 24px); background: #101951; color: white; }
 .site-header--landing { height: 86px; position: absolute; inset: 0 0 auto; padding-inline: max(4vw, 28px); background: transparent; }
 .site-header--landing .brand-mark { width: 49px; height: 49px; border-color: transparent; color: #e4e0ff; background: transparent; }
@@ -34,6 +35,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .brand-text strong { font-family: Manrope, sans-serif; font-size: 15px; font-weight: 800; }
 .brand-text small { margin-top: 5px; font-size: 10px; font-style: italic; color: #c6cbe4; letter-spacing: .01em; }
 .header-right { display: flex; align-items: center; gap: 15px; position: relative; }
+.header-page-action { min-height: 32px; display: inline-flex; align-items: center; gap: 5px; padding: 0 3px; border: 0; color: #d6d9f4; background: transparent; font-size: 10px; font-weight: 650; cursor: pointer; }
+.header-page-action:hover { color: #fff; }
+.header-logout { color: #ffc5cb; }
 .status-badge { min-height: 29px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgb(255 255 255 / 18%); border-radius: 20px; color: #eeefff; background: rgb(255 255 255 / 9%); font-size: 11px; font-weight: 600; }
 .status-badge i, .live-pill i, .live-message i, .auto-note i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: #30d79a; box-shadow: 0 0 0 3px rgb(48 215 154 / 15%); }
 .status-badge--live { border-color: rgb(48 215 154 / 35%); color: #b7ffe6; }
@@ -184,12 +188,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .ballot-option input { position: absolute; opacity: 0; }
 .radio-mark { width: 17px; height: 17px; margin-left: auto; border: 1.5px solid #c6c8d6; border-radius: 50%; }
 .ballot-option.is-selected .radio-mark { border: 5px solid #5b52d8; }
-.simple-footer { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: auto; padding: 17px max(5.2vw, 24px); border-top: 1px solid #e9eaf1; color: #9398aa; background: white; font-size: 9px; }
+.simple-footer { display: flex; flex: 0 0 auto; justify-content: space-between; align-items: center; gap: 15px; margin-top: auto; padding: 17px max(5.2vw, 24px); border-top: 1px solid #e9eaf1; color: #9398aa; background: white; font-size: 9px; }
 .simple-footer > span:first-child { color: #4d5270; font-weight: 800; }
 .simple-footer button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 0; border: 0; color: #645bd3; background: transparent; font-size: 9px; font-weight: 700; cursor: pointer; }
 
 /* Admin workspace */
-.admin-layout { flex: 1; min-height: calc(100vh - 82px); display: grid; grid-template-columns: 225px minmax(0, 1fr); background: #f6f7fb; }
+.admin-layout { min-height: 0; display: grid; flex: 1; grid-template-columns: 225px minmax(0, 1fr); background: #f6f7fb; }
 .admin-sidebar { display: flex; flex-direction: column; padding: 23px 14px; color: #e4e6f4; background: #111951; }
 .admin-brand { display: flex; align-items: center; gap: 10px; padding: 0 7px 27px; }
 .admin-brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; color: #c7c3ff; background: rgb(255 255 255 / 11%); }
@@ -293,7 +297,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .site-header { height: 70px; padding: 0 17px; }
   .brand { gap: 8px; }.brand-mark { width: 38px; height: 38px; border-radius: 12px; }.brand-mark svg { width: 27px; }
   .brand-text strong { font-size: 12px; }.brand-text small { font-size: 8px; }
-  .header-right { gap: 9px; }.status-badge { min-height: 25px; padding: 0 8px; font-size: 8px; }
+  .header-right { gap: 7px; }.header-right .status-badge { display: none; }
+  .header-page-action { width: 34px; height: 34px; justify-content: center; padding: 0; border: 1px solid rgb(255 255 255 / 17%); border-radius: 50%; font-size: 0; }
+  .status-badge { min-height: 25px; padding: 0 8px; font-size: 8px; }
   .menu-toggle { width: 39px; height: 39px; }.role-menu { top: 51px; }
   .site-header--landing { height: 72px; padding: 0 16px; }
   .site-header--landing .brand-mark { width: 43px; height: 43px; }
@@ -312,7 +318,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .voter-icon { width: 45px; height: 45px; }.voter-copy strong { font-size: 18px; }
   .trend-panel { padding: 16px; }
   .subpage { width: calc(100% - 32px); padding: 27px 0 45px; }
-  .subpage-heading { margin-bottom: 20px; }.back-link { margin-bottom: 19px; }
+  .subpage-heading { margin-bottom: 20px; }
   .form-card { padding: 17px; }
   .form-card-heading { flex-wrap: wrap; }.deadline-chip { margin-left: 49px; }
   .form-grid { grid-template-columns: 1fr; gap: 13px; }.full-field { grid-column: auto; }
