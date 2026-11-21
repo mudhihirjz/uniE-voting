@@ -244,14 +244,16 @@ function App() {
             <button className="header-page-action" type="button" aria-label="Back to portal" onClick={() => navigate("home")}><Icon name="back" size={17} /><span>Back</span></button>
             <button className="header-page-action header-logout" type="button" aria-label="Logout" onClick={logout}><Icon name="logout" size={17} /><span>Logout</span></button>
           </>}
-          <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label={menuOpen ? "Close role menu" : "Open role menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
-            <Icon name={menuOpen ? "close" : "menu"} />
-          </button>
-          {menuOpen && <><button className="menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} /><nav className="role-menu" aria-label="Role menu">
-            {!appClosed && <button onClick={() => navigate("application")}><Icon name="file" size={17} /> Application</button>}
-            {appClosed && <button onClick={() => navigate("candidate")}><Icon name="trophy" size={17} /> Candidate</button>}
-            <button onClick={() => navigate("admin")}><Icon name="shield" size={17} /> Admin</button>
-          </nav></>}
+          {page === "home" && <>
+            <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label={menuOpen ? "Close role menu" : "Open role menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+              <Icon name={menuOpen ? "close" : "menu"} />
+            </button>
+            {menuOpen && <><button className="menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} /><nav className="role-menu" aria-label="Role menu">
+              {!appClosed && <button onClick={() => navigate("application")}><Icon name="file" size={17} /> Application</button>}
+              {appClosed && <button onClick={() => navigate("candidate")}><Icon name="trophy" size={17} /> Candidate</button>}
+              <button onClick={() => navigate("admin")}><Icon name="shield" size={17} /> Admin</button>
+            </nav></>}
+          </>}
         </div>
       </header>
 
