@@ -1,6 +1,6 @@
 # University E-Voting
 
-A React and Vite prototype for a university student election portal. The interface includes the public voter landing page and live participation trend, candidate applications and portal, plus an NEC admin dashboard for reviewing applications, scheduling elections, and printing reports.
+A React and Vite prototype for a university student election portal. The public landing page follows `uni.jpeg` with the campus hero, role menu, and voter entry point. Separate role pages provide the live voting trend, candidate application and portal, and NEC tools for reviewing applications, scheduling elections, and printing reports.
 
 ## Run locally
 

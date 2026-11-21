@@ -29,6 +29,7 @@ function Icon({ name, size = 20 }) {
     cap: <><path d="m2 9 10-5 10 5-10 5L2 9Z" /><path d="M6 11v5c3.5 2.5 8.5 2.5 12 0v-5M21 10v6" /></>,
     menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></>,
     users: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1" /></>,
     file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h8" /></>,
     trophy: <><path d="M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0V4ZM7 7H4v2a4 4 0 0 0 4 4m9-6h3v2a4 4 0 0 1-4 4" /></>,
@@ -168,6 +169,11 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function logout() {
+    setAdminTab("Overview");
+    navigate("home");
+  }
+
   function submitApplication(event) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -229,10 +235,10 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="site-header">
+      <header className={`site-header${page === "home" ? " site-header--landing" : ""}`}>
         <Brand />
         <div className="header-right">
-          {renderElectionState()}
+          {page !== "home" && renderElectionState()}
           <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label={menuOpen ? "Close role menu" : "Open role menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <Icon name={menuOpen ? "close" : "menu"} />
           </button>
@@ -249,45 +255,23 @@ function App() {
           <section className="hero">
             <div className="hero-overlay" />
             <div className="hero-inner">
-              <p className="eyebrow"><span /> STUDENT ELECTIONS 2026</p>
-              <h1>Your voice.<br /><span>Your university.</span></h1>
-              <p className="hero-copy">Choose leaders who will shape the future of our campus. Fair, transparent, and in your hands.</p>
-              <div className="hero-trust"><span><Icon name="shield" size={17} /> Secure ballot</span><span><Icon name="users" size={17} /> Every vote counts</span></div>
+              <h1>Welcome to<br /><span>University E-Voting</span></h1>
+              <p className="hero-copy">Vote. Choose. Build a Better University.</p>
             </div>
+            <section className="voter-section">
+              <button className="voter-card" onClick={() => navigate("vote")} type="button">
+                <span className="voter-icon"><Icon name="users" size={29} /></span>
+                <span className="voter-copy"><strong>Voters</strong><small>Click to Start Voting</small></span>
+                <span className="voter-arrow"><Icon name="arrow" size={19} /></span>
+              </button>
+            </section>
             <div className="hero-bottom">
               <div className="hero-bottom-inner">
-                <span>THE NEXT CHAPTER STARTS WITH YOU</span>
-                <span className="hero-date"><Icon name="clock" size={16} /> {formatDate(schedule.start)}</span>
+                <span className="landing-footer-copy"><Icon name="shield" size={19} /> Our University · Our Future</span>
+                <span className="landing-copyright">© 2026 University E-Voting. All rights reserved.</span>
               </div>
             </div>
           </section>
-
-          <section className="voter-section">
-            <button className="voter-card" onClick={() => navigate("vote")} type="button">
-              <span className="voter-icon"><Icon name="users" size={29} /></span>
-              <span className="voter-copy"><strong>Voters</strong><small>{electionState === "live" ? "Your ballot is ready — vote now" : "Click to view your voting portal"}</small></span>
-              <span className="voter-arrow"><Icon name="arrow" size={19} /></span>
-            </button>
-            {electionState === "upcoming" && <div className="election-countdown"><span>Election begins in</span><Countdown target={schedule.start} now={now} /></div>}
-            {electionState === "live" && <p className="live-message"><i /> Voting is open now · Closes {formatDate(schedule.end, { timeStyle: "short" })}</p>}
-            {electionState === "ended" && <p className="closed-message">Voting is closed. Thank you for taking part.</p>}
-            {electionState === "cancelled" && <p className="closed-message">This election schedule was cancelled by the NEC.</p>}
-          </section>
-
-          <section className="home-content">
-            <div className="section-intro"><div><p className="eyebrow eyebrow--blue">A TRANSPARENT PROCESS</p><h2>Every voice moves us forward.</h2><p>Follow participation live, then cast your vote when the polls open.</p></div><div className="verified-note"><Icon name="shield" size={19} /><span><strong>One student, one vote</strong><small>Protected voting process</small></span></div></div>
-            <div className="home-grid">
-              <TrendPanel votes={votes} />
-              <section className="candidate-preview">
-                <div className="panel-title"><span className="icon-tile icon-tile--blue"><Icon name="trophy" size={18} /></span><div><h2>Meet the candidates</h2><p>Get to know the people standing for you</p></div></div>
-                <div className="candidate-list">
-                  {candidates.map((candidate) => <div className="candidate-row" key={candidate.name}><span className={`avatar avatar--${candidate.color}`}>{candidate.initials}</span><span className="candidate-info"><strong>{candidate.name}</strong><small>{candidate.position}</small></span><span className="candidate-approved"><Icon name="check" size={15} /> Verified</span></div>)}
-                </div>
-                <div className="candidate-foot"><span>Applications close {formatDate(applicationDeadline, { dateStyle: "medium" })}</span><button className="text-button" onClick={() => navigate(appClosed ? "candidate" : "application")}>{appClosed ? "Candidate portal" : "Apply to run"} <Icon name="arrow" size={15} /></button></div>
-              </section>
-            </div>
-          </section>
-          <footer className="site-footer"><Brand compact /><span>University E-Voting · Our university, our future.</span><span>© 2026</span></footer>
         </main>
       )}
 
@@ -337,7 +321,7 @@ function App() {
             <div className="admin-brand"><span className="admin-brand-mark"><Icon name="cap" size={25} /></span><span><strong>UNIVERSITY</strong><small>ELECTIONS NEC</small></span></div>
             <p className="sidebar-label">MANAGEMENT</p>
             {["Overview", "Applications", "Election settings", "Results & reports"].map((item) => <button key={item} className={`sidebar-link${adminTab === item ? " is-active" : ""}`} onClick={() => setAdminTab(item)}><Icon name={item === "Overview" ? "chart" : item === "Applications" ? "users" : item === "Election settings" ? "clock" : "file"} size={17} />{item}</button>)}
-            <div className="sidebar-footer"><span className="admin-avatar">N</span><span><strong>NEC Admin</strong><small>Election administrator</small></span></div>
+            <button className="sidebar-link sidebar-logout" onClick={logout}><Icon name="logout" size={17} />Logout</button>
           </aside>
           <section className="admin-main">
             <div className="admin-topbar"><div><p className="eyebrow eyebrow--blue">UNIVERSITY ELECTIONS</p><h1>{adminTab}</h1></div><button className="admin-home-button" onClick={() => navigate("home")}>View public portal <Icon name="arrow" size={16} /></button></div>
@@ -356,7 +340,7 @@ function App() {
           </section>
         </main>
       )}
-      {page !== "admin" && <footer className="simple-footer"><span>University E-Voting</span><span>Your voice. Our university.</span><button onClick={() => navigate("admin")}>NEC admin <Icon name="arrow" size={14} /></button></footer>}
+      {page !== "admin" && page !== "home" && <footer className="simple-footer"><span>University E-Voting</span><span>Your voice. Our university.</span><button onClick={() => navigate("admin")}>NEC admin <Icon name="arrow" size={14} /></button></footer>}
     </div>
   );
 }
