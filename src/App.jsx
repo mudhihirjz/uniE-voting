@@ -37,6 +37,12 @@ function Icon({ name, size = 20 }) {
     shield: <><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" /><path d="m9 12 2 2 4-4" /></>,
     chart: <><path d="M3 3v18h18M8 15l4-4 4 3 5-7" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
+    person: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+    support: <><path d="M4 13v-2a8 8 0 0 1 16 0v2" /><path d="M4 13h3v6H6a2 2 0 0 1-2-2v-4Zm16 0h-3v6h1a2 2 0 0 0 2-2v-4ZM12 21h3" /></>,
+    info: <><circle cx="12" cy="12" r="10" /><path d="M12 11v5m0-8h.01" /></>,
+    bolt: <path d="m13 2-3 8h7l-6 12 2-9H6l7-11Z" />,
+    ballot: <><path d="M9 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" /><path d="M9 3h6v5H9zM8 14l2 2 5-5" /></>,
     check: <path d="m5 12 4 4L19 6" />,
     x: <path d="m6 6 12 12M18 6 6 18" />,
     pin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
@@ -146,6 +152,7 @@ function App() {
   const [voteChoice, setVoteChoice] = useState("");
   const [notice, setNotice] = useState("");
   const [adminTab, setAdminTab] = useState("Overview");
+  const [candidateTab, setCandidateTab] = useState("My Profile");
   const [scheduleDraft, setScheduleDraft] = useState(schedule);
 
   useEffect(() => {
@@ -172,6 +179,7 @@ function App() {
 
   function logout() {
     setAdminTab("Overview");
+    setCandidateTab("My Profile");
     navigate("home");
   }
 
@@ -188,6 +196,7 @@ function App() {
     };
     setApplications((items) => [candidate, ...items]);
     setApplication(candidate);
+    setCandidateTab("My Profile");
     navigate("candidate");
     setNotice("Maombi yako yamepokelewa. Utapata taarifa baada ya NEC kuyapitia.");
   }
@@ -241,6 +250,8 @@ function App() {
         <div className="header-right">
           {page !== "home" && renderElectionState()}
           {page !== "home" && <>
+            {page === "candidate" && <span className="header-user-chip"><Icon name="person" size={16} /> {application?.name || "John Doe"} <span aria-hidden="true">⌄</span></span>}
+            {page === "vote" && <span className="header-user-chip"><Icon name="person" size={16} /> Guest Voter <span aria-hidden="true">⌄</span></span>}
             <button className="header-page-action" type="button" aria-label="Back to portal" onClick={() => navigate("home")}><Icon name="back" size={17} /><span>Back</span></button>
             <button className="header-page-action header-logout" type="button" aria-label="Logout" onClick={logout}><Icon name="logout" size={17} /><span>Logout</span></button>
           </>}
@@ -283,7 +294,7 @@ function App() {
         </main>
       )}
 
-      {["application", "candidate", "vote"].includes(page) && <div className="role-live-trend"><TrendPanel votes={votes} compact /></div>}
+      {["application", "ballot"].includes(page) && <div className="role-live-trend"><TrendPanel votes={votes} compact /></div>}
 
       {page === "application" && (
         <main className="subpage">
@@ -305,18 +316,83 @@ function App() {
       )}
 
       {page === "candidate" && (
-        <main className="subpage">
-          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">CANDIDATE PORTAL</p><h1>Your campaign starts here.</h1><p>Review your application status and keep your election information close.</p></div>
-          <section className="candidate-portal-card">
-            <div className="portal-banner"><span className="portal-trophy"><Icon name="trophy" size={25} /></span><div><span>APPLICATION PERIOD {appClosed ? "HAS ENDED" : "IS OPEN"}</span><strong>{appClosed ? "Candidate portal" : "Candidate information"}</strong></div></div>
-            {application ? <div className="portal-details"><div className="portal-status"><span className={application.status === "Approved" ? "approved-dot" : application.status === "Rejected" ? "rejected-dot" : "pending-dot"} /><div><strong>{application.status === "Approved" ? "Application approved" : application.status === "Rejected" ? "Application not approved" : "Application under review"}</strong><small>{application.status === "Approved" ? "You are registered as a candidate." : "The NEC will update your status after reviewing your application."}</small></div></div><dl><div><dt>Name</dt><dd>{application.name}</dd></div><div><dt>Student ID</dt><dd>{application.studentId}</dd></div><div><dt>Position</dt><dd>{application.position}</dd></div><div><dt>Status</dt><dd><span className="table-status">{application.status}</span></dd></div></dl></div> : <div className="empty-candidate"><span className="empty-icon"><Icon name="users" size={24} /></span><h2>No application found</h2><p>{appClosed ? "The application period has ended and there is no application attached to this session." : "Submit your application before the deadline to see your candidate profile here."}</p>{!appClosed && <button className="button button--primary" onClick={() => navigate("application")}>Apply to be a candidate</button>}</div>}
-            <div className="portal-footer"><Icon name="clock" size={17} /><span>Election day: <strong>{formatDate(schedule.start)}</strong></span></div>
+        <main className="candidate-layout">
+          <aside className="candidate-sidebar" aria-label="Candidate portal navigation">
+            <div className="candidate-sidebar-profile"><span className="candidate-portrait"><Icon name="person" size={34} /></span><strong>Candidate Portal</strong><small>Be the change.</small></div>
+            <nav className="candidate-nav">
+              {[
+                ["My Profile", "person"],
+                ["My Application", "file"],
+                ["Election Info", "calendar"],
+                ["Live Results", "chart"],
+                ["Help & Support", "support"],
+              ].map(([label, icon]) => <button key={label} className={`candidate-nav-link${candidateTab === label ? " is-active" : ""}`} onClick={() => setCandidateTab(label)}><Icon name={icon} size={17} />{label}</button>)}
+            </nav>
+          </aside>
+          <section className="candidate-main">
+            {candidateTab === "My Profile" ? (
+              <>
+                <section className="candidate-hero">
+                  <div className="candidate-hero-copy"><span className="candidate-approved-mark"><Icon name="check" size={22} /></span><div><p className="eyebrow">YOUR CAMPAIGN</p><h1>Candidate Portal</h1><p>Manage your application and stay updated on the election process.</p></div></div>
+                </section>
+                <section className="candidate-profile-card">
+                  <span className="candidate-portrait candidate-portrait--large"><Icon name="person" size={39} /></span>
+                  <div className="candidate-profile-info"><strong>{application?.name || "John Doe"}</strong><span>Candidate Portal</span><span className={`candidate-status candidate-status--${(application?.status || "Approved").toLowerCase()}`}><Icon name="check" size={13} /> {application?.status || "Approved"}</span></div>
+                </section>
+                {notice && <p className="inline-notice" role="status">{notice}</p>}
+                <div className="candidate-cards">
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("My Application")}><span className="candidate-action-icon"><Icon name="file" size={23} /></span><span className="candidate-action-copy"><strong>My Application</strong><small>View your application status and details.</small></span><span className="candidate-action-meta"><span className={`table-status${application?.status === "Approved" || !application ? " table-status--approved" : ""}`}>{application?.status || "Approved"}</span><span className="button button--primary candidate-small-button">View Details <Icon name="arrow" size={14} /></span></span></button>
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("Election Info")}><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><span className="candidate-action-copy"><strong>Election Information</strong><small>Check election date, time and other details.</small></span><span className="candidate-action-meta"><span className="table-status table-status--scheduled">{electionState === "live" ? "Live" : electionState === "ended" ? "Ended" : "Scheduled"}</span><span className="button button--primary candidate-small-button">View Info <Icon name="arrow" size={14} /></span></span></button>
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("Live Results")}><span className="candidate-action-icon"><Icon name="chart" size={23} /></span><span className="candidate-action-copy"><strong>Live Results</strong><small>Follow live voting trends and final results.</small></span><span className="candidate-action-meta"><span className="table-status table-status--live">● Live</span><span className="button button--primary candidate-small-button"><Icon name="chart" size={14} /> View Results</span></span></button>
+                </div>
+                <div className="candidate-notice-card"><span className="candidate-notice-icon"><Icon name="info" size={20} /></span><div><strong>Stay informed!</strong><small>Your participation strengthens our democratic process.</small></div><span className="candidate-notice-art" aria-hidden="true">📣</span></div>
+              </>
+            ) : (
+              <section className="candidate-section">
+                <button className="portal-back-link" onClick={() => setCandidateTab("My Profile")}><Icon name="back" size={17} /> Candidate Portal</button>
+                <p className="eyebrow eyebrow--blue">CANDIDATE PORTAL</p>
+                <h1>{candidateTab}</h1>
+                {candidateTab === "My Application" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="file" size={23} /></span><div><h2>Application status</h2><p>Your submitted candidate information.</p></div><span className={`table-status${application?.status === "Approved" || !application ? " table-status--approved" : ""}`}>{application?.status || "Approved"}</span></div><dl><div><dt>Name</dt><dd>{application?.name || "John Doe"}</dd></div><div><dt>Student ID</dt><dd>{application?.studentId || "UE/2024/0182"}</dd></div><div><dt>Position</dt><dd>{application?.position || "Student President"}</dd></div></dl>{application?.manifesto && <p className="manifesto-copy">{application.manifesto}</p>}{notice && <p className="inline-notice" role="status">{notice}</p>}</section>}
+                {candidateTab === "Election Info" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><div><h2>Election schedule</h2><p>Official date and voting hours.</p></div>{renderElectionState()}</div><dl><div><dt>Starts</dt><dd>{formatDate(schedule.start)}</dd></div><div><dt>Ends</dt><dd>{formatDate(schedule.end)}</dd></div><div><dt>Current status</dt><dd>{electionState === "live" ? "Voting is open" : electionState === "ended" ? "Voting has ended" : "Scheduled"}</dd></div></dl></section>}
+                {candidateTab === "Live Results" && <><TrendPanel votes={votes} /><section className="candidate-detail-card candidate-results-list"><h2>Leading candidates</h2>{candidates.map((item) => <div key={item.name}><span className={`avatar avatar--${item.color}`}>{item.initials}</span><span><strong>{item.name}</strong><small>{item.position}</small></span><b>{(item.votes / candidates.reduce((sum, candidate) => sum + candidate.votes, 0) * 100).toFixed(1)}%</b></div>)}</section></>}
+                {candidateTab === "Help & Support" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="support" size={23} /></span><div><h2>Need help?</h2><p>Contact the Election Committee for candidate support.</p></div></div><p className="help-copy">For questions about your application or the election schedule, contact the university election office.</p><a className="button button--primary" href="mailto:elections@university.edu">Contact election support</a></section>}
+              </section>
+            )}
           </section>
-          {notice && <p className="inline-notice" role="status">{notice}</p>}
         </main>
       )}
 
       {page === "vote" && (
+        <main className="voter-portal">
+          <section className="voter-hero">
+            <div className="voter-hero-copy"><p className="eyebrow">YOUR VOICE MATTERS</p><h1>Welcome to<br />University <span>E-Voting</span> Portal</h1><p>Your Voice Matters. Vote for a Better University!</p></div>
+            <div className="voter-schedule-card"><h2><Icon name="calendar" size={17} /> Election Schedule</h2><div><span>Starts</span><strong>{formatDate(schedule.start)}</strong></div><div><span>Ends</span><strong>{formatDate(schedule.end)}</strong></div></div>
+          </section>
+          <section className="voter-live-panel">
+            <div className="voter-panel-heading"><span><Icon name="chart" size={18} /> Live Voting Trend</span><span className={`voter-live-indicator${electionState === "live" ? " is-live" : ""}`}><i /> {electionState === "live" ? "Live" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</span></div>
+            <div className="voter-stats">
+              <div className="turnout-ring" style={{ "--turnout": `${Math.min(100, votes / 2450 * 100)}%` }}><strong>{(votes / 2450 * 100).toFixed(1)}%</strong><small>Turnout Rate</small></div>
+              <div className="voter-stat"><span className="voter-stat-icon voter-stat-blue"><Icon name="users" /></span><span>Total Voters</span><strong>2,450</strong></div>
+              <div className="voter-stat"><span className="voter-stat-icon voter-stat-green"><Icon name="check" /></span><span>Votes Cast</span><strong>{votes.toLocaleString()}</strong></div>
+              <div className="voter-stat"><span className="voter-stat-icon voter-stat-orange"><Icon name="clock" /></span><span>Remaining</span><strong>{Math.max(0, 2450 - votes).toLocaleString()}</strong></div>
+              <div className="voter-bars" aria-label="Vote participation is trending upward"><i /><i /><i /><i /><i /></div>
+            </div>
+          </section>
+          <section className="ready-to-vote">
+            <div className="ballot-illustration" aria-hidden="true"><span><Icon name="check" size={28} /></span><i /></div>
+            <div className="ready-copy"><h2>{electionState === "live" ? "Ready to Vote?" : "Get Ready to Vote"}</h2><p>{electionState === "live" ? "Click below to cast your vote in the ongoing election." : electionState === "cancelled" ? "The election schedule has been cancelled by the NEC." : "The ballot will open automatically when the election starts."}</p></div>
+            <button className="button button--primary vote-now-button" onClick={() => navigate("ballot")}> <Icon name="ballot" size={17} /> Vote Now <Icon name="arrow" size={15} /></button>
+          </section>
+          <section className="voter-features">
+            <div><span className="feature-icon feature-secure"><Icon name="shield" size={22} /></span><strong>Secure &amp; Transparent</strong><small>Your vote is safe and counted fairly.</small></div>
+            <div><span className="feature-icon feature-realtime"><Icon name="bolt" size={22} /></span><strong>Real-Time Updates</strong><small>Follow live trends and results.</small></div>
+            <div><span className="feature-icon feature-help"><Icon name="support" size={22} /></span><strong>Need Help?</strong><small>Contact support for assistance.</small></div>
+            <div><span className="feature-icon feature-info"><Icon name="info" size={22} /></span><strong>Election Info</strong><small>View key election details.</small></div>
+          </section>
+        </main>
+      )}
+
+      {page === "ballot" && (
         <main className="subpage">
           <div className="subpage-heading"><p className="eyebrow eyebrow--blue">VOTER PORTAL</p><h1>Your vote matters.</h1><p>Make your choice for each position. Your ballot is private.</p></div>
           {electionState !== "live" ? <section className="vote-unavailable"><span className="icon-tile"><Icon name={electionState === "ended" ? "check" : "clock"} size={22} /></span><h2>{electionState === "ended" ? "Voting has ended" : electionState === "cancelled" ? "Election cancelled" : "The polls aren’t open yet"}</h2><p>{electionState === "upcoming" ? `Voting opens ${formatDate(schedule.start)}. You can return here when the countdown ends.` : electionState === "cancelled" ? "The NEC will publish an updated election schedule." : "Thank you for participating in this election."}</p>{electionState === "upcoming" && <Countdown target={schedule.start} now={now} />}</section> : hasVoted ? <section className="vote-success"><span><Icon name="check" size={28} /></span><h2>Your vote has been recorded.</h2><p>Thank you for making your voice heard. Your ballot has been submitted securely.</p><button className="button button--outline" onClick={() => navigate("home")}>Back to home</button></section> : <form className="form-card ballot-form" onSubmit={castVote}><div className="ballot-heading"><span className="live-pill"><i /> Voting is live</span><h2>Choose your Student President</h2><p>Select one candidate. You can only submit your ballot once.</p></div><div className="ballot-options">{candidates.map((candidate) => <label className={`ballot-option${voteChoice === candidate.name ? " is-selected" : ""}`} key={candidate.name}><input type="radio" name="candidate" value={candidate.name} checked={voteChoice === candidate.name} onChange={(event) => setVoteChoice(event.target.value)} required /><span className={`avatar avatar--${candidate.color}`}>{candidate.initials}</span><span className="candidate-info"><strong>{candidate.name}</strong><small>{candidate.position}</small></span><span className="radio-mark" /></label>)}</div><div className="form-footer"><span><Icon name="shield" size={16} /> Your selection is private.</span><button className="button button--primary" type="submit">Submit my vote <Icon name="arrow" size={17} /></button></div></form>}
