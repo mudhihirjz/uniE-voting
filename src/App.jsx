@@ -1,16 +1,45 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 const initialApplications = [
-  { id: 1, name: "Amina Joseph", studentId: "UE/2024/0182", position: "Student President", status: "Pending" },
-  { id: 2, name: "Brian Mwangi", studentId: "UE/2023/0097", position: "Dean of Students", status: "Pending" },
-  { id: 3, name: "Neema Peter", studentId: "UE/2024/0241", position: "Treasurer", status: "Pending" },
+  { id: 1, name: "Amina Joseph", studentId: "UE/2024/0182", position: "Student President", status: "Pending", manifesto: "I will advocate for students and improve the quality of our campus community." },
+  { id: 2, name: "Brian Mwangi", studentId: "UE/2023/0097", position: "Dean of Students", status: "Pending", manifesto: "I will strengthen student support and make university services easier to access." },
+  { id: 3, name: "Neema Peter", studentId: "UE/2024/0241", position: "Treasurer", status: "Pending", manifesto: "I will promote transparent budgeting and regular financial updates for students." },
 ];
 
-const candidates = [
-  { name: "Amina Joseph", position: "Student President", color: "violet", initials: "AJ", votes: 423 },
-  { name: "Brian Mwangi", position: "Dean of Students", color: "blue", initials: "BM", votes: 318 },
-  { name: "Neema Peter", position: "Treasurer", color: "gold", initials: "NP", votes: 241 },
+const positions = ["Student President", "Dean of Students", "Treasurer", "Academic Representative"];
+const adminSections = [
+  ["Overview", "chart"],
+  ["Applications", "users"],
+  ["Election settings", "clock"],
+  ["Results & reports", "file"],
 ];
+const appPages = new Set(["home", "application", "candidate", "vote", "ballot", "admin"]);
+
+function getPageFromHash() {
+  const pageFromHash = window.location.hash.slice(1);
+  return appPages.has(pageFromHash) ? pageFromHash : "home";
+}
+const registeredVoters = 2450;
+const storagePrefix = "unie-voting-demo:";
+
+function useStoredState(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    const stored = window.localStorage.getItem(`${storagePrefix}${key}`);
+    if (stored === null) return typeof initialValue === "function" ? initialValue() : initialValue;
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error(`Could not read saved ${key} data.`, error);
+      return typeof initialValue === "function" ? initialValue() : initialValue;
+    }
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(`${storagePrefix}${key}`, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+}
 
 const defaultSchedule = () => {
   const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
@@ -86,53 +115,67 @@ function Countdown({ target, now }) {
   );
 }
 
-function TrendChart({ votes }) {
-  const points = useMemo(() => {
-    const values = [16, 23, 30, 45, 54, 64, 69, 78, 82, 91].map((value, index) => value + Math.min(7, Math.floor(votes / 100) - 4) + (index % 3));
-    return values.map((value, index) => `${18 + index * 36},${130 - value}`).join(" ");
-  }, [votes]);
+function TrendChart({ history }) {
+  const samples = history.slice(-12);
+  const maxVotes = Math.max(4, ...samples.map((sample) => sample.votes));
+  const points = samples.map((sample, index) => ({
+    x: samples.length === 1 ? 18 : 18 + index * 324 / (samples.length - 1),
+    y: 130 - sample.votes / maxVotes * 105,
+    ...sample,
+  }));
+  const pointList = points.map(({ x, y }) => `${x},${y}`).join(" ");
+  const yLabels = [maxVotes, Math.round(maxVotes * .75), Math.round(maxVotes * .5), Math.round(maxVotes * .25), 0];
+  const xLabels = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])]
+    .map((index) => points[index])
+    .filter(Boolean);
+
   return (
     <div className="chart-wrap">
-      <div className="chart-y-labels"><span>800</span><span>600</span><span>400</span><span>200</span><span>0</span></div>
-      <svg className="trend-chart" viewBox="0 0 360 142" role="img" aria-label="Upward trend of votes cast over time">
+      <div className="chart-y-labels">{yLabels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div>
+      <svg className="trend-chart" viewBox="0 0 360 142" role="img" aria-label="Ballot submissions recorded in this browser">
         <defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#6559eb" stopOpacity=".24" /><stop offset="100%" stopColor="#6559eb" stopOpacity="0" /></linearGradient></defs>
         {[25, 52, 79, 106, 133].map((y) => <line key={y} x1="18" x2="342" y1={y} y2={y} className="chart-grid" />)}
-        <polygon points={`18,133 ${points} 342,133`} fill="url(#chartFill)" />
-        <polyline points={points} className="chart-line" />
-        {points.split(" ").map((point) => {
-          const [cx, cy] = point.split(",");
-          return <circle key={point} cx={cx} cy={cy} r="3.3" className="chart-dot" />;
-        })}
+        {points.length > 1 && <>
+          <polygon points={`18,133 ${pointList} 342,133`} fill="url(#chartFill)" />
+          <polyline points={pointList} className="chart-line" />
+        </>}
+        {points.map(({ x, y, at }) => <circle key={at} cx={x} cy={y} r="3.3" className="chart-dot" />)}
       </svg>
-      <div className="chart-x-labels"><span>08:00</span><span>09:00</span><span>10:00</span><span>11:00</span><span>12:00</span></div>
+      <div className="chart-x-labels">{xLabels.length ? xLabels.map((sample) => <span key={sample.at}>{new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(sample.at)}</span>) : <span>No local demo ballots yet</span>}</div>
     </div>
   );
 }
 
-function TrendPanel({ votes, compact = false }) {
-  const candidateVotes = candidates.reduce((total, candidate) => total + candidate.votes, 0);
+function TrendPanel({ votes, electionState, candidates, voteCounts, history, compact = false }) {
+  const stateLabel = electionState === "live" ? "Live" : electionState === "ended" ? "Ended" : electionState === "cancelled" ? "Cancelled" : "Scheduled";
   return (
     <section className={`trend-panel${compact ? " trend-panel--compact" : ""}`}>
       <div className="panel-title-row">
-        <div className="panel-title"><span className="icon-tile"><Icon name="chart" size={18} /></span><div><h2>Live voting trend</h2><p>Participation across campus</p></div></div>
-        <span className="live-pill"><i /> Live</span>
+        <div className="panel-title"><span className="icon-tile"><Icon name="chart" size={18} /></span><div><h2>Live voting trend</h2><p>Ballots recorded in this browser</p></div></div>
+        <span className={`live-pill${electionState !== "live" ? " live-pill--scheduled" : ""}`}><i /> {stateLabel}</span>
       </div>
       <div className="trend-total"><strong>{votes.toLocaleString()}</strong><span>votes cast so far</span></div>
-      <TrendChart votes={votes} />
+      <TrendChart history={history} />
       <div className="trend-positions">
-        {candidates.map((candidate) => (
-          <div className="trend-position" key={candidate.position}>
-          <span>{candidate.position}</span><div className="progress-track"><i className={`progress-${candidate.color}`} style={{ width: `${candidate.votes / candidateVotes * 100}%` }} /></div><strong>{Math.round(candidate.votes / candidateVotes * 100)}%</strong>
-          </div>
-        ))}
+        {positions.map((position) => {
+          const positionCandidates = candidates.filter((candidate) => candidate.position === position);
+          const positionVotes = positionCandidates.reduce((total, candidate) => total + (voteCounts[candidate.id] || 0), 0);
+          return positionCandidates.length ? positionCandidates.map((candidate) => {
+            const count = voteCounts[candidate.id] || 0;
+            const percentage = positionVotes ? Math.round(count / positionVotes * 100) : 0;
+            return <div className="trend-position" key={candidate.id}>
+              <span>{candidate.name} · {position}</span><div className="progress-track"><i style={{ width: `${percentage}%` }} /></div><strong>{percentage}%</strong>
+            </div>;
+          }) : <div className="trend-position" key={position}><span>{position}</span><span className="trend-empty">No approved candidates</span></div>;
+        })}
       </div>
     </section>
   );
 }
 
-function Brand({ compact = false }) {
+function Brand({ compact = false, onNavigate }) {
   return (
-    <a className="brand" href="#home" aria-label="University E-Voting home">
+    <a className="brand" href="#home" aria-label="University E-Voting home" onClick={(event) => { event.preventDefault(); onNavigate("home"); }}>
       <span className="brand-mark"><Icon name="cap" size={30} /></span>
       {!compact && <span className="brand-text"><strong>UNIVERSITY</strong><strong>E-VOTING SYSTEM</strong><small>Your voice. Our university.</small></span>}
     </a>
@@ -140,20 +183,22 @@ function Brand({ compact = false }) {
 }
 
 function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(getPageFromHash);
   const [menuOpen, setMenuOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [schedule, setSchedule] = useState(defaultSchedule);
-  const [applicationDeadline] = useState(() => Date.now() + 3 * 24 * 60 * 60 * 1000);
-  const [applications, setApplications] = useState(initialApplications);
-  const [application, setApplication] = useState(null);
-  const [votes, setVotes] = useState(1320);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [voteChoice, setVoteChoice] = useState("");
+  const [schedule, setSchedule] = useStoredState("schedule", defaultSchedule);
+  const [applications, setApplications] = useStoredState("applications", initialApplications);
+  const [candidateApplicationId, setCandidateApplicationId] = useStoredState("candidate-application-id", null);
+  const [votes, setVotes] = useStoredState("ballots-cast", 0);
+  const [voteCounts, setVoteCounts] = useStoredState("vote-counts", {});
+  const [voteHistory, setVoteHistory] = useStoredState("vote-history", []);
+  const [hasVoted, setHasVoted] = useStoredState("has-voted", false);
+  const [voteChoices, setVoteChoices] = useState({});
   const [notice, setNotice] = useState("");
   const [adminTab, setAdminTab] = useState("Overview");
   const [candidateTab, setCandidateTab] = useState("My Profile");
   const [scheduleDraft, setScheduleDraft] = useState(schedule);
+  const [expandedApplicationId, setExpandedApplicationId] = useState(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -161,16 +206,34 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setVotes((count) => count + 1), 7000);
-    return () => window.clearInterval(timer);
+    function syncPageFromHistory() {
+      setPage(getPageFromHash());
+      setMenuOpen(false);
+      setNotice("");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.addEventListener("popstate", syncPageFromHistory);
+    return () => window.removeEventListener("popstate", syncPageFromHistory);
   }, []);
 
+  const application = useMemo(
+    () => applications.find((item) => item.id === candidateApplicationId) || null,
+    [applications, candidateApplicationId],
+  );
+  const candidates = useMemo(() => applications.filter((item) => item.status === "Approved"), [applications]);
+  const applicationDeadline = new Date(schedule.start).getTime() - 24 * 60 * 60 * 1000;
   const appClosed = now >= applicationDeadline;
   const electionState = getElectionState(schedule, now);
   const startTime = new Date(schedule.start).getTime();
   const canCancel = electionState === "upcoming" && now < startTime - 60 * 60 * 1000;
+  const votingPositions = positions.filter((position) => candidates.some((candidate) => candidate.position === position));
 
-  function navigate(nextPage) {
+  function navigate(nextPage, replace = false) {
+    const nextHash = `#${nextPage}`;
+    if (window.location.hash !== nextHash) {
+      const historyMethod = replace ? "replaceState" : "pushState";
+      window.history[historyMethod]({ page: nextPage }, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+    }
     setPage(nextPage);
     setMenuOpen(false);
     setNotice("");
@@ -180,34 +243,51 @@ function App() {
   function logout() {
     setAdminTab("Overview");
     setCandidateTab("My Profile");
-    navigate("home");
+    navigate("home", true);
   }
 
   function submitApplication(event) {
     event.preventDefault();
+    if (appClosed) {
+      setNotice("The application period has ended.");
+      return;
+    }
     const formData = new FormData(event.currentTarget);
+    const studentId = formData.get("studentId").trim();
+    if (applications.some((item) => item.studentId.toLowerCase() === studentId.toLowerCase())) {
+      setNotice("An application with this student ID has already been submitted.");
+      return;
+    }
     const candidate = {
       id: Date.now(),
       name: formData.get("fullName").trim(),
-      studentId: formData.get("studentId").trim(),
+      studentId,
       position: formData.get("position"),
       status: "Pending",
       manifesto: formData.get("manifesto").trim(),
     };
     setApplications((items) => [candidate, ...items]);
-    setApplication(candidate);
+    setCandidateApplicationId(candidate.id);
     setCandidateTab("My Profile");
     navigate("candidate");
     setNotice("Maombi yako yamepokelewa. Utapata taarifa baada ya NEC kuyapitia.");
   }
 
   function decideApplication(id, status) {
+    if (electionState === "live" || electionState === "ended") {
+      setNotice("Applications can no longer be changed after voting starts.");
+      return;
+    }
     setApplications((items) => items.map((item) => item.id === id ? { ...item, status } : item));
     setNotice(`Ombi lime${status === "Approved" ? "idhinishwa" : "kataliwa"}.`);
   }
 
   function saveSchedule(event) {
     event.preventDefault();
+    if (electionState === "live") {
+      setNotice("The schedule cannot be changed while voting is live.");
+      return;
+    }
     const start = new Date(scheduleDraft.start).getTime();
     const end = new Date(scheduleDraft.end).getTime();
     if (!start || !end || end <= start) {
@@ -219,6 +299,11 @@ function App() {
       return;
     }
     setSchedule({ ...scheduleDraft, cancelled: false });
+    setVotes(0);
+    setVoteCounts({});
+    setVoteHistory([]);
+    setHasVoted(false);
+    setVoteChoices({});
     setNotice("Ratiba ya uchaguzi imehifadhiwa.");
   }
 
@@ -230,8 +315,22 @@ function App() {
 
   function castVote(event) {
     event.preventDefault();
-    if (!voteChoice) return;
+    if (electionState !== "live" || hasVoted) {
+      setNotice("A ballot can only be submitted once while voting is open.");
+      return;
+    }
+    const validChoices = votingPositions.every((position) =>
+      candidates.some((candidate) => candidate.position === position && String(candidate.id) === String(voteChoices[position])),
+    );
+    if (!votingPositions.length || !validChoices) {
+      setNotice("Select one approved candidate for each available position.");
+      return;
+    }
+    setVoteCounts((current) => Object.entries(voteChoices).reduce((nextCounts, [position, candidateId]) => (
+      votingPositions.includes(position) ? { ...nextCounts, [candidateId]: (nextCounts[candidateId] || 0) + 1 } : nextCounts
+    ), current));
     setVotes((count) => count + 1);
+    setVoteHistory((current) => [...current, { at: Date.now(), votes: (current.at(-1)?.votes || 0) + 1 }].slice(-30));
     setHasVoted(true);
     setNotice("Kura yako imepokelewa kwa mafanikio.");
   }
@@ -246,12 +345,20 @@ function App() {
   return (
     <div className="app-shell">
       <header className={`site-header${page === "home" ? " site-header--landing" : ""}`}>
-        <Brand />
+        <Brand onNavigate={navigate} />
         <div className="header-right">
           {page !== "home" && renderElectionState()}
           {page !== "home" && <>
-            {page === "candidate" && <span className="header-user-chip"><Icon name="person" size={16} /> {application?.name || "John Doe"} <span aria-hidden="true">⌄</span></span>}
+            {page === "candidate" && <span className="header-user-chip"><Icon name="person" size={16} /> {application?.name || "Candidate"} <span aria-hidden="true">⌄</span></span>}
             {page === "vote" && <span className="header-user-chip"><Icon name="person" size={16} /> Guest Voter <span aria-hidden="true">⌄</span></span>}
+            {page === "admin" && <>
+              <button className={`menu-toggle admin-menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label={menuOpen ? "Close Admin menu" : "Open Admin menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+                <Icon name={menuOpen ? "close" : "menu"} />
+              </button>
+              {menuOpen && <><button className="menu-scrim admin-menu-scrim" aria-label="Dismiss Admin menu overlay" onClick={() => setMenuOpen(false)} /><nav className="admin-mobile-menu" aria-label="Admin menu">
+                {adminSections.map(([item, icon]) => <button key={item} onClick={() => { setAdminTab(item); setMenuOpen(false); }}><Icon name={icon} size={17} />{item}</button>)}
+              </nav></>}
+            </>}
             <button className="header-page-action" type="button" aria-label="Back to portal" onClick={() => navigate("home")}><Icon name="back" size={17} /><span>Back</span></button>
             <button className="header-page-action header-logout" type="button" aria-label="Logout" onClick={logout}><Icon name="logout" size={17} /><span>Logout</span></button>
           </>}
@@ -294,24 +401,25 @@ function App() {
         </main>
       )}
 
-      {["application", "ballot"].includes(page) && <div className="role-live-trend"><TrendPanel votes={votes} compact /></div>}
+      {["application", "ballot"].includes(page) && <div className="role-live-trend"><TrendPanel votes={votes} electionState={electionState} candidates={candidates} voteCounts={voteCounts} history={voteHistory} compact /></div>}
 
       {page === "application" && (
         <main className="subpage">
           <div className="subpage-heading"><p className="eyebrow eyebrow--blue">CANDIDATE APPLICATION</p><h1>Stand for something.</h1><p>Tell your fellow students why you’re the right person to represent them.</p></div>
+          {notice && <p className="inline-notice" role="status">{notice}</p>}
           {appClosed ? <div className="notice-card"><span className="notice-icon"><Icon name="clock" /></span><div><strong>Applications are closed</strong><p>The application period has ended. The candidate portal is now available.</p></div><button className="button button--primary" onClick={() => navigate("candidate")}>Candidate portal</button></div> : (
             <form className="form-card application-form" onSubmit={submitApplication}>
               <div className="form-card-heading"><span className="icon-tile"><Icon name="file" /></span><div><h2>Candidate application</h2><p>All fields marked * are required.</p></div><span className="deadline-chip"><Icon name="clock" size={15} /> Closes {formatDate(applicationDeadline, { dateStyle: "medium" })}</span></div>
               <div className="form-grid">
                 <label>Full name *<input autoComplete="name" name="fullName" placeholder="e.g. Amina Joseph" required /></label>
                 <label>Student ID / Registration no. *<input name="studentId" placeholder="e.g. UE/2024/0182" required /></label>
-                <label className="full-field">Position you want to contest *<select name="position" defaultValue="" required><option value="" disabled>Select a position</option><option>Student President</option><option>Dean of Students</option><option>Treasurer</option><option>Academic Representative</option></select></label>
+                <label className="full-field">Position you want to contest *<select name="position" defaultValue="" required><option value="" disabled>Select a position</option>{positions.map((position) => <option key={position}>{position}</option>)}</select></label>
                 <label className="full-field">Your manifesto *<textarea name="manifesto" rows="5" minLength="30" placeholder="Share your plans and priorities for students (at least 30 characters)..." required /></label>
               </div>
               <div className="form-footer"><span><Icon name="shield" size={16} /> Your application is reviewed by the NEC.</span><button className="button button--primary" type="submit"><Icon name="arrow" size={17} /> Submit application</button></div>
             </form>
           )}
-          <div className="page-note"><Icon name="clock" size={17} /><span>After the deadline, this menu changes to the Candidate portal. Check here for your application status.</span></div>
+          <div className="page-note"><Icon name="clock" size={17} /><span>Applications close 24 hours before the scheduled election start. After the deadline, this menu changes to the Candidate portal.</span></div>
         </main>
       )}
 
@@ -337,13 +445,18 @@ function App() {
                 </section>
                 <section className="candidate-profile-card">
                   <span className="candidate-portrait candidate-portrait--large"><Icon name="person" size={39} /></span>
-                  <div className="candidate-profile-info"><strong>{application?.name || "John Doe"}</strong><span>Candidate Portal</span><span className={`candidate-status candidate-status--${(application?.status || "Approved").toLowerCase()}`}><Icon name="check" size={13} /> {application?.status || "Approved"}</span></div>
+                  <div className="candidate-profile-info">
+                    <strong>{application?.name || "No application found"}</strong>
+                    <span>{application ? application.position : "No application is saved in this browser."}</span>
+                    {application && <span className={`candidate-status candidate-status--${application.status.toLowerCase()}`}><Icon name="check" size={13} /> {application.status}</span>}
+                  </div>
                 </section>
                 {notice && <p className="inline-notice" role="status">{notice}</p>}
                 <div className="candidate-cards">
-                  <button className="candidate-action-card" onClick={() => setCandidateTab("My Application")}><span className="candidate-action-icon"><Icon name="file" size={23} /></span><span className="candidate-action-copy"><strong>My Application</strong><small>View your application status and details.</small></span><span className="candidate-action-meta"><span className={`table-status${application?.status === "Approved" || !application ? " table-status--approved" : ""}`}>{application?.status || "Approved"}</span><span className="button button--primary candidate-small-button">View Details <Icon name="arrow" size={14} /></span></span></button>
-                  <button className="candidate-action-card" onClick={() => setCandidateTab("Election Info")}><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><span className="candidate-action-copy"><strong>Election Information</strong><small>Check election date, time and other details.</small></span><span className="candidate-action-meta"><span className="table-status table-status--scheduled">{electionState === "live" ? "Live" : electionState === "ended" ? "Ended" : "Scheduled"}</span><span className="button button--primary candidate-small-button">View Info <Icon name="arrow" size={14} /></span></span></button>
-                  <button className="candidate-action-card" onClick={() => setCandidateTab("Live Results")}><span className="candidate-action-icon"><Icon name="chart" size={23} /></span><span className="candidate-action-copy"><strong>Live Results</strong><small>Follow live voting trends and final results.</small></span><span className="candidate-action-meta"><span className="table-status table-status--live">● Live</span><span className="button button--primary candidate-small-button"><Icon name="chart" size={14} /> View Results</span></span></button>
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("My Application")}><span className="candidate-action-icon"><Icon name="file" size={23} /></span><span className="candidate-action-copy"><strong>My Application</strong><small>View your application status and details.</small></span><span className="candidate-action-meta"><span className={`table-status${application?.status === "Approved" ? " table-status--approved" : application?.status === "Rejected" ? " table-status--rejected" : ""}`}>{application?.status || "Not found"}</span><span className="button button--primary candidate-small-button">View Details <Icon name="arrow" size={14} /></span></span></button>
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("Election Info")}><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><span className="candidate-action-copy"><strong>Election Information</strong><small>Check election date, time and other details.</small></span><span className="candidate-action-meta"><span className="table-status table-status--scheduled">{electionState === "live" ? "Live" : electionState === "ended" ? "Ended" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</span><span className="button button--primary candidate-small-button">View Info <Icon name="arrow" size={14} /></span></span></button>
+                  <button className="candidate-action-card" onClick={() => setCandidateTab("Live Results")}><span className="candidate-action-icon"><Icon name="chart" size={23} /></span><span className="candidate-action-copy"><strong>Live Results</strong><small>Follow live voting trends and final results.</small></span><span className="candidate-action-meta"><span className={`table-status${electionState === "live" ? " table-status--live" : ""}`}>{electionState === "live" ? "Live" : electionState === "ended" ? "Final" : "Scheduled"}</span><span className="button button--primary candidate-small-button"><Icon name="chart" size={14} /> View Results</span></span></button>
+                  <button className="candidate-action-card candidate-help-card" onClick={() => setCandidateTab("Help & Support")}><span className="candidate-action-icon"><Icon name="support" size={23} /></span><span className="candidate-action-copy"><strong>Help &amp; Support</strong><small>Contact the Election Committee.</small></span><span className="button button--primary candidate-small-button">Get help <Icon name="arrow" size={14} /></span></button>
                 </div>
                 <div className="candidate-notice-card"><span className="candidate-notice-icon"><Icon name="info" size={20} /></span><div><strong>Stay informed!</strong><small>Your participation strengthens our democratic process.</small></div><span className="candidate-notice-art" aria-hidden="true">📣</span></div>
               </>
@@ -352,10 +465,14 @@ function App() {
                 <button className="portal-back-link" onClick={() => setCandidateTab("My Profile")}><Icon name="back" size={17} /> Candidate Portal</button>
                 <p className="eyebrow eyebrow--blue">CANDIDATE PORTAL</p>
                 <h1>{candidateTab}</h1>
-                {candidateTab === "My Application" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="file" size={23} /></span><div><h2>Application status</h2><p>Your submitted candidate information.</p></div><span className={`table-status${application?.status === "Approved" || !application ? " table-status--approved" : ""}`}>{application?.status || "Approved"}</span></div><dl><div><dt>Name</dt><dd>{application?.name || "John Doe"}</dd></div><div><dt>Student ID</dt><dd>{application?.studentId || "UE/2024/0182"}</dd></div><div><dt>Position</dt><dd>{application?.position || "Student President"}</dd></div></dl>{application?.manifesto && <p className="manifesto-copy">{application.manifesto}</p>}{notice && <p className="inline-notice" role="status">{notice}</p>}</section>}
-                {candidateTab === "Election Info" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><div><h2>Election schedule</h2><p>Official date and voting hours.</p></div>{renderElectionState()}</div><dl><div><dt>Starts</dt><dd>{formatDate(schedule.start)}</dd></div><div><dt>Ends</dt><dd>{formatDate(schedule.end)}</dd></div><div><dt>Current status</dt><dd>{electionState === "live" ? "Voting is open" : electionState === "ended" ? "Voting has ended" : "Scheduled"}</dd></div></dl></section>}
-                {candidateTab === "Live Results" && <><TrendPanel votes={votes} /><section className="candidate-detail-card candidate-results-list"><h2>Leading candidates</h2>{candidates.map((item) => <div key={item.name}><span className={`avatar avatar--${item.color}`}>{item.initials}</span><span><strong>{item.name}</strong><small>{item.position}</small></span><b>{(item.votes / candidates.reduce((sum, candidate) => sum + candidate.votes, 0) * 100).toFixed(1)}%</b></div>)}</section></>}
-                {candidateTab === "Help & Support" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="support" size={23} /></span><div><h2>Need help?</h2><p>Contact the Election Committee for candidate support.</p></div></div><p className="help-copy">For questions about your application or the election schedule, contact the university election office.</p><a className="button button--primary" href="mailto:elections@university.edu">Contact election support</a></section>}
+                {candidateTab === "My Application" && (application ? <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="file" size={23} /></span><div><h2>Application status</h2><p>Your submitted candidate information.</p></div><span className={`table-status${application.status === "Approved" ? " table-status--approved" : application.status === "Rejected" ? " table-status--rejected" : ""}`}>{application.status}</span></div><dl><div><dt>Name</dt><dd>{application.name}</dd></div><div><dt>Student ID</dt><dd>{application.studentId}</dd></div><div><dt>Position</dt><dd>{application.position}</dd></div></dl><p className="manifesto-copy">{application.manifesto}</p>{notice && <p className="inline-notice" role="status">{notice}</p>}</section> : <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="file" size={23} /></span><div><h2>No application found</h2><p>This browser has no saved candidate application.</p></div></div></section>)}
+                {candidateTab === "Election Info" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="calendar" size={23} /></span><div><h2>Election schedule</h2><p>Official date and voting hours.</p></div>{renderElectionState()}</div><dl><div><dt>Starts</dt><dd>{formatDate(schedule.start)}</dd></div><div><dt>Ends</dt><dd>{formatDate(schedule.end)}</dd></div><div><dt>Current status</dt><dd>{electionState === "live" ? "Voting is open" : electionState === "ended" ? "Voting has ended" : electionState === "cancelled" ? "Election was cancelled" : "Scheduled"}</dd></div></dl></section>}
+                {candidateTab === "Live Results" && <><TrendPanel votes={votes} electionState={electionState} candidates={candidates} voteCounts={voteCounts} history={voteHistory} /><section className="candidate-detail-card candidate-results-list"><h2>Results by position</h2>{candidates.length ? candidates.map((item) => {
+                  const positionVotes = candidates.filter((candidate) => candidate.position === item.position).reduce((total, candidate) => total + (voteCounts[candidate.id] || 0), 0);
+                  const percentage = positionVotes ? ((voteCounts[item.id] || 0) / positionVotes * 100).toFixed(1) : "0.0";
+                  return <div key={item.id}><span className="avatar avatar--violet">{item.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{item.name}</strong><small>{item.position}</small></span><b>{(voteCounts[item.id] || 0).toLocaleString()} · {percentage}%</b></div>;
+                }) : <p className="help-copy">No applications have been approved for the ballot yet.</p>}</section></>}
+                {candidateTab === "Help & Support" && <section className="candidate-detail-card"><div className="candidate-detail-heading"><span className="candidate-action-icon"><Icon name="support" size={23} /></span><div><h2>Need help?</h2><p>Contact the Election Committee for candidate support.</p></div></div><p className="help-copy">No support contact is configured in this local demo. Please use the official contact details provided by your university election office.</p></section>}
               </section>
             )}
           </section>
@@ -369,13 +486,12 @@ function App() {
             <div className="voter-schedule-card"><h2><Icon name="calendar" size={17} /> Election Schedule</h2><div><span>Starts</span><strong>{formatDate(schedule.start)}</strong></div><div><span>Ends</span><strong>{formatDate(schedule.end)}</strong></div></div>
           </section>
           <section className="voter-live-panel">
-            <div className="voter-panel-heading"><span><Icon name="chart" size={18} /> Live Voting Trend</span><span className={`voter-live-indicator${electionState === "live" ? " is-live" : ""}`}><i /> {electionState === "live" ? "Live" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</span></div>
+            <div className="voter-panel-heading"><span><Icon name="chart" size={18} /> Live Voting Trend</span><span className={`voter-live-indicator${electionState === "live" ? " is-live" : ""}`}><i /> {electionState === "live" ? "Live" : electionState === "ended" ? "Ended" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</span></div>
             <div className="voter-stats">
-              <div className="turnout-ring" style={{ "--turnout": `${Math.min(100, votes / 2450 * 100)}%` }}><strong>{(votes / 2450 * 100).toFixed(1)}%</strong><small>Turnout Rate</small></div>
-              <div className="voter-stat"><span className="voter-stat-icon voter-stat-blue"><Icon name="users" /></span><span>Total Voters</span><strong>2,450</strong></div>
+              <div className="turnout-ring" style={{ "--turnout": `${Math.min(100, votes / registeredVoters * 100)}%` }}><strong>{(votes / registeredVoters * 100).toFixed(1)}%</strong><small>Turnout Rate</small></div>
+              <div className="voter-stat"><span className="voter-stat-icon voter-stat-blue"><Icon name="users" /></span><span>Registered (demo)</span><strong>{registeredVoters.toLocaleString()}</strong></div>
               <div className="voter-stat"><span className="voter-stat-icon voter-stat-green"><Icon name="check" /></span><span>Votes Cast</span><strong>{votes.toLocaleString()}</strong></div>
-              <div className="voter-stat"><span className="voter-stat-icon voter-stat-orange"><Icon name="clock" /></span><span>Remaining</span><strong>{Math.max(0, 2450 - votes).toLocaleString()}</strong></div>
-              <div className="voter-bars" aria-label="Vote participation is trending upward"><i /><i /><i /><i /><i /></div>
+              <div className="voter-stat"><span className="voter-stat-icon voter-stat-orange"><Icon name="clock" /></span><span>Remaining (demo)</span><strong>{Math.max(0, registeredVoters - votes).toLocaleString()}</strong></div>
             </div>
           </section>
           <section className="ready-to-vote">
@@ -384,8 +500,8 @@ function App() {
             <button className="button button--primary vote-now-button" onClick={() => navigate("ballot")}> <Icon name="ballot" size={17} /> Vote Now <Icon name="arrow" size={15} /></button>
           </section>
           <section className="voter-features">
-            <div><span className="feature-icon feature-secure"><Icon name="shield" size={22} /></span><strong>Secure &amp; Transparent</strong><small>Your vote is safe and counted fairly.</small></div>
-            <div><span className="feature-icon feature-realtime"><Icon name="bolt" size={22} /></span><strong>Real-Time Updates</strong><small>Follow live trends and results.</small></div>
+            <div><span className="feature-icon feature-secure"><Icon name="shield" size={22} /></span><strong>Local demo</strong><small>Ballots stay in this browser.</small></div>
+            <div><span className="feature-icon feature-realtime"><Icon name="bolt" size={22} /></span><strong>Live Updates</strong><small>See locally recorded ballot activity.</small></div>
             <div><span className="feature-icon feature-help"><Icon name="support" size={22} /></span><strong>Need Help?</strong><small>Contact support for assistance.</small></div>
             <div><span className="feature-icon feature-info"><Icon name="info" size={22} /></span><strong>Election Info</strong><small>View key election details.</small></div>
           </section>
@@ -394,8 +510,8 @@ function App() {
 
       {page === "ballot" && (
         <main className="subpage">
-          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">VOTER PORTAL</p><h1>Your vote matters.</h1><p>Make your choice for each position. Your ballot is private.</p></div>
-          {electionState !== "live" ? <section className="vote-unavailable"><span className="icon-tile"><Icon name={electionState === "ended" ? "check" : "clock"} size={22} /></span><h2>{electionState === "ended" ? "Voting has ended" : electionState === "cancelled" ? "Election cancelled" : "The polls aren’t open yet"}</h2><p>{electionState === "upcoming" ? `Voting opens ${formatDate(schedule.start)}. You can return here when the countdown ends.` : electionState === "cancelled" ? "The NEC will publish an updated election schedule." : "Thank you for participating in this election."}</p>{electionState === "upcoming" && <Countdown target={schedule.start} now={now} />}</section> : hasVoted ? <section className="vote-success"><span><Icon name="check" size={28} /></span><h2>Your vote has been recorded.</h2><p>Thank you for making your voice heard. Your ballot has been submitted securely.</p><button className="button button--outline" onClick={() => navigate("home")}>Back to home</button></section> : <form className="form-card ballot-form" onSubmit={castVote}><div className="ballot-heading"><span className="live-pill"><i /> Voting is live</span><h2>Choose your Student President</h2><p>Select one candidate. You can only submit your ballot once.</p></div><div className="ballot-options">{candidates.map((candidate) => <label className={`ballot-option${voteChoice === candidate.name ? " is-selected" : ""}`} key={candidate.name}><input type="radio" name="candidate" value={candidate.name} checked={voteChoice === candidate.name} onChange={(event) => setVoteChoice(event.target.value)} required /><span className={`avatar avatar--${candidate.color}`}>{candidate.initials}</span><span className="candidate-info"><strong>{candidate.name}</strong><small>{candidate.position}</small></span><span className="radio-mark" /></label>)}</div><div className="form-footer"><span><Icon name="shield" size={16} /> Your selection is private.</span><button className="button button--primary" type="submit">Submit my vote <Icon name="arrow" size={17} /></button></div></form>}
+          <div className="subpage-heading"><p className="eyebrow eyebrow--blue">VOTER PORTAL</p><h1>Your vote matters.</h1><p>Choose an approved candidate for each position. This local demo records totals in your browser.</p></div>
+          {electionState !== "live" ? <section className="vote-unavailable"><span className="icon-tile"><Icon name={electionState === "ended" ? "check" : "clock"} size={22} /></span><h2>{electionState === "ended" ? "Voting has ended" : electionState === "cancelled" ? "Election cancelled" : "The polls aren’t open yet"}</h2><p>{electionState === "upcoming" ? `Voting opens ${formatDate(schedule.start)}. You can return here when the countdown ends.` : electionState === "cancelled" ? "The NEC will publish an updated election schedule." : "Thank you for participating in this election."}</p>{electionState === "upcoming" && <Countdown target={schedule.start} now={now} />}</section> : hasVoted ? <section className="vote-success"><span><Icon name="check" size={28} /></span><h2>Your vote has been recorded.</h2><p>This browser has already submitted its local demo ballot. Ballots are stored only on this device.</p><button className="button button--outline" onClick={() => navigate("home")}>Back to home</button></section> : votingPositions.length === 0 ? <section className="vote-unavailable"><span className="icon-tile"><Icon name="users" size={22} /></span><h2>No approved candidates yet</h2><p>The ballot will be available after the NEC approves candidate applications.</p></section> : <form className="form-card ballot-form" onSubmit={castVote}><div className="ballot-heading"><span className="live-pill"><i /> Voting is live</span><h2>Choose your candidates</h2><p>Choose one approved candidate for each available position. One ballot can be submitted from this browser.</p></div>{votingPositions.map((position) => <fieldset className="ballot-position" key={position}><legend>{position}</legend><div className="ballot-options">{candidates.filter((candidate) => candidate.position === position).map((candidate) => <label className={`ballot-option${String(voteChoices[position]) === String(candidate.id) ? " is-selected" : ""}`} key={candidate.id}><input type="radio" name={`candidate-${position}`} value={candidate.id} checked={String(voteChoices[position]) === String(candidate.id)} onChange={(event) => setVoteChoices((current) => ({ ...current, [position]: event.target.value }))} required /><span className="avatar avatar--violet">{candidate.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span className="candidate-info"><strong>{candidate.name}</strong><small>{candidate.position}</small></span><span className="radio-mark" /></label>)}</div></fieldset>)}{notice && <p className="inline-notice" role="status">{notice}</p>}<div className="form-footer"><span><Icon name="shield" size={16} /> Local demo only. Do not use for a real election.</span><button className="button button--primary" type="submit">Submit ballot <Icon name="arrow" size={17} /></button></div></form>}
         </main>
       )}
 
@@ -404,28 +520,31 @@ function App() {
           <aside className="admin-sidebar">
             <div className="admin-brand"><span className="admin-brand-mark"><Icon name="cap" size={25} /></span><span><strong>UNIVERSITY</strong><small>ELECTIONS NEC</small></span></div>
             <p className="sidebar-label">MANAGEMENT</p>
-            {["Overview", "Applications", "Election settings", "Results & reports"].map((item) => <button key={item} className={`sidebar-link${adminTab === item ? " is-active" : ""}`} onClick={() => setAdminTab(item)}><Icon name={item === "Overview" ? "chart" : item === "Applications" ? "users" : item === "Election settings" ? "clock" : "file"} size={17} />{item}</button>)}
-            <button className="sidebar-link sidebar-logout" onClick={logout}><Icon name="logout" size={17} />Logout</button>
+            {adminSections.map(([item, icon]) => <button key={item} className={`sidebar-link${adminTab === item ? " is-active" : ""}`} onClick={() => setAdminTab(item)}><Icon name={icon} size={17} />{item}</button>)}
           </aside>
           <section className="admin-main">
             <div className="admin-topbar"><div><p className="eyebrow eyebrow--blue">UNIVERSITY ELECTIONS</p><h1>{adminTab}</h1></div></div>
             {notice && <p className="inline-notice" role="status">{notice}</p>}
-            {adminTab !== "Overview" && <TrendPanel votes={votes} compact />}
+            {adminTab !== "Overview" && <TrendPanel votes={votes} electionState={electionState} candidates={candidates} voteCounts={voteCounts} history={voteHistory} compact />}
             {adminTab === "Overview" && <div className="admin-dashboard">
-              <div className="admin-welcome"><div><span>WELCOME BACK, NEC ADMIN</span><h2>Election overview</h2><p>Monitor progress and manage election day.</p></div><span className="welcome-icon"><Icon name="shield" size={25} /></span></div>
-              <div className="stat-grid"><div className="stat-card"><span className="stat-icon stat-violet"><Icon name="users" /></span><span>Total voters</span><strong>2,450</strong><small>Registered students</small></div><div className="stat-card"><span className="stat-icon stat-green"><Icon name="check" /></span><span>Votes cast</span><strong>{votes.toLocaleString()}</strong><small>{Math.round(votes / 2450 * 100)}% turnout</small></div><div className="stat-card"><span className="stat-icon stat-orange"><Icon name="file" /></span><span>Applications</span><strong>{applications.length}</strong><small>{applications.filter((item) => item.status === "Pending").length} awaiting review</small></div><div className="stat-card"><span className="stat-icon stat-blue"><Icon name="clock" /></span><span>Election status</span><strong className="stat-state">{electionState === "live" ? "Live now" : electionState === "ended" ? "Ended" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</strong><small>{electionState === "live" ? "Voting is open" : formatDate(schedule.start, { dateStyle: "medium" })}</small></div></div>
+              <div className="admin-welcome"><div><span>NEC ADMIN · LOCAL DEMO</span><h2>Election overview</h2><p>Changes are saved only in this browser.</p></div><span className="welcome-icon"><Icon name="shield" size={25} /></span></div>
+              <div className="stat-grid"><div className="stat-card"><span className="stat-icon stat-violet"><Icon name="users" /></span><span>Registered voters (demo)</span><strong>{registeredVoters.toLocaleString()}</strong><small>Sample electorate</small></div><div className="stat-card"><span className="stat-icon stat-green"><Icon name="check" /></span><span>Votes cast</span><strong>{votes.toLocaleString()}</strong><small>{(votes / registeredVoters * 100).toFixed(1)}% turnout</small></div><div className="stat-card"><span className="stat-icon stat-orange"><Icon name="file" /></span><span>Applications</span><strong>{applications.length}</strong><small>{applications.filter((item) => item.status === "Pending").length} awaiting review</small></div><div className="stat-card"><span className="stat-icon stat-blue"><Icon name="clock" /></span><span>Election status</span><strong className="stat-state">{electionState === "live" ? "Live now" : electionState === "ended" ? "Ended" : electionState === "cancelled" ? "Cancelled" : "Scheduled"}</strong><small>{electionState === "live" ? "Voting is open" : formatDate(schedule.start, { dateStyle: "medium" })}</small></div></div>
               <div className="admin-dashboard-grid"><section className="admin-card schedule-card"><div className="admin-card-heading"><div><h2>Election schedule</h2><p>Automatic start and close</p></div>{renderElectionState()}</div><div className="schedule-details"><div><span>Starts</span><strong>{formatDate(schedule.start)}</strong></div><div><span>Ends</span><strong>{formatDate(schedule.end)}</strong></div></div>{electionState === "upcoming" && <div className="schedule-countdown"><span>Time remaining to start</span><Countdown target={schedule.start} now={now} /></div>}{electionState === "live" && <p className="auto-note"><i /> Voting started automatically. It will close at the scheduled end time.</p>}{schedule.cancelled && <p className="auto-note cancelled-note">This election was cancelled.</p>}<button className="button button--danger" onClick={cancelElection} disabled={!canCancel}>{schedule.cancelled ? "Election cancelled" : "Cancel election"}{!canCancel && electionState === "upcoming" && <small>Available until 1 hour before start</small>}</button></section>
-                <TrendPanel votes={votes} compact /></div>
-              <section className="admin-card results-card"><div className="admin-card-heading"><div><h2>Overall results</h2><p>Live totals across polling stations</p></div><button className="text-button" onClick={() => setAdminTab("Results & reports")}>View report <Icon name="arrow" size={15} /></button></div><div className="result-stats"><div><span className="result-emoji">♙</span><span>Total voters</span><strong>2,450</strong></div><div><span className="result-emoji result-green">✓</span><span>Votes cast</span><strong>{votes.toLocaleString()}</strong></div><div><span className="result-emoji result-purple">◴</span><span>Turnout</span><strong>{(votes / 2450 * 100).toFixed(1)}%</strong></div><div><span className="result-emoji result-orange">◷</span><span>Pending</span><strong>{Math.max(0, 2450 - votes).toLocaleString()}</strong></div></div></section>
+                <TrendPanel votes={votes} electionState={electionState} candidates={candidates} voteCounts={voteCounts} history={voteHistory} compact /></div>
+              <section className="admin-card results-card"><div className="admin-card-heading"><div><h2>Overall results</h2><p>Local demo totals (not polling-station results)</p></div><button className="text-button" onClick={() => setAdminTab("Results & reports")}>View report <Icon name="arrow" size={15} /></button></div><div className="result-stats"><div><span className="result-emoji">♙</span><span>Registered (demo)</span><strong>{registeredVoters.toLocaleString()}</strong></div><div><span className="result-emoji result-green">✓</span><span>Ballots cast</span><strong>{votes.toLocaleString()}</strong></div><div><span className="result-emoji result-purple">◴</span><span>Turnout</span><strong>{(votes / registeredVoters * 100).toFixed(1)}%</strong></div><div><span className="result-emoji result-orange">◷</span><span>Remaining (demo)</span><strong>{Math.max(0, registeredVoters - votes).toLocaleString()}</strong></div></div></section>
             </div>}
-            {adminTab === "Applications" && <section className="admin-card applications-admin"><div className="admin-card-heading"><div><h2>Candidate applications</h2><p>Review applicant details and approve eligible candidates.</p></div><span className="pending-count">{applications.filter((item) => item.status === "Pending").length} pending</span></div><div className="application-table-wrap"><table className="data-table"><thead><tr><th>Applicant</th><th>Student ID</th><th>Position</th><th>Status</th><th>Review</th></tr></thead><tbody>{applications.map((item) => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.studentId}</td><td>{item.position}</td><td><span className={`table-status${item.status === "Approved" ? " table-status--approved" : item.status === "Rejected" ? " table-status--rejected" : ""}`}>{item.status}</span></td><td>{item.status === "Pending" ? <span className="review-actions"><button title="Approve application" aria-label={`Approve ${item.name}`} onClick={() => decideApplication(item.id, "Approved")}><Icon name="check" size={16} /></button><button title="Reject application" aria-label={`Reject ${item.name}`} onClick={() => decideApplication(item.id, "Rejected")}><Icon name="x" size={16} /></button></span> : <span className="reviewed-label">Reviewed</span>}</td></tr>)}</tbody></table></div>{applications.length === 0 && <p className="empty-table">No applications have been submitted yet.</p>}</section>}
-            {adminTab === "Election settings" && <section className="admin-card settings-card"><div className="admin-card-heading"><div><h2>Election settings</h2><p>Set the exact date and time for automatic election start and close.</p></div><span className="icon-tile"><Icon name="clock" /></span></div><form className="settings-form" onSubmit={saveSchedule}><label>Election starts<input type="datetime-local" value={scheduleDraft.start} onChange={(event) => setScheduleDraft((current) => ({ ...current, start: event.target.value }))} required /></label><label>Election ends<input type="datetime-local" value={scheduleDraft.end} onChange={(event) => setScheduleDraft((current) => ({ ...current, end: event.target.value }))} required /></label><p className="settings-hint"><Icon name="shield" size={16} /> Election starts and ends automatically at the scheduled times. Cancellation is only available until one hour before it begins.</p><button className="button button--primary" type="submit">Save election schedule</button></form></section>}
-            {adminTab === "Results & reports" && <section className="admin-card report-card"><div className="admin-card-heading"><div><h2>Election results & reports</h2><p>Live overall results and polling station turnout.</p></div><button className="button button--primary print-button" onClick={() => window.print()}><Icon name="print" size={16} /> Print report</button></div><div className="report-table-wrap"><table className="data-table"><thead><tr><th>Position</th><th>Leading candidate</th><th>Votes</th><th>Percentage</th></tr></thead><tbody>{candidates.map((candidate) => <tr key={candidate.position}><td>{candidate.position}</td><td><strong>{candidate.name}</strong></td><td>{candidate.votes.toLocaleString()}</td><td>{(candidate.votes / candidates.reduce((total, item) => total + item.votes, 0) * 100).toFixed(1)}%</td></tr>)}</tbody></table></div><div className="station-results"><h3><Icon name="pin" size={17} /> Results by polling station</h3>{[["Main Campus", "680", "55.2%"], ["Engineering Block", "420", "52.1%"], ["Science Faculty", "356", "53.0%"]].map(([station, total, turnout]) => <div key={station}><span>{station}</span><span>{total} votes</span><strong>{turnout}</strong></div>)}</div></section>}
+            {adminTab === "Applications" && <section className="admin-card applications-admin"><div className="admin-card-heading"><div><h2>Candidate applications</h2><p>Review applicant details and approve eligible candidates.</p></div><span className="pending-count">{applications.filter((item) => item.status === "Pending").length} pending</span></div><div className="application-table-wrap"><table className="data-table"><thead><tr><th>Applicant</th><th>Student ID</th><th>Position</th><th>Status</th><th>Details</th><th>Review</th></tr></thead><tbody>{applications.map((item) => <React.Fragment key={item.id}><tr><td><strong>{item.name}</strong></td><td>{item.studentId}</td><td>{item.position}</td><td><span className={`table-status${item.status === "Approved" ? " table-status--approved" : item.status === "Rejected" ? " table-status--rejected" : ""}`}>{item.status}</span></td><td><button className="text-button" onClick={() => setExpandedApplicationId((current) => current === item.id ? null : item.id)}>{expandedApplicationId === item.id ? "Hide" : "View"} manifesto</button></td><td>{item.status === "Pending" ? <span className="review-actions"><button title="Approve application" aria-label={`Approve ${item.name}`} onClick={() => decideApplication(item.id, "Approved")}><Icon name="check" size={16} /></button><button title="Reject application" aria-label={`Reject ${item.name}`} onClick={() => decideApplication(item.id, "Rejected")}><Icon name="x" size={16} /></button></span> : <span className="reviewed-label">Reviewed</span>}</td></tr>{expandedApplicationId === item.id && <tr className="application-manifesto-row"><td colSpan="6"><strong>Manifesto</strong><p>{item.manifesto || "No manifesto was provided."}</p></td></tr>}</React.Fragment>)}</tbody></table></div>{applications.length === 0 && <p className="empty-table">No applications have been submitted yet.</p>}</section>}
+            {adminTab === "Election settings" && <section className="admin-card settings-card"><div className="admin-card-heading"><div><h2>Election settings</h2><p>Set the exact date and time for automatic election start and close.</p></div><span className="icon-tile"><Icon name="clock" /></span></div><form className="settings-form" onSubmit={saveSchedule}><label>Election starts<input type="datetime-local" value={scheduleDraft.start} onChange={(event) => setScheduleDraft((current) => ({ ...current, start: event.target.value }))} required /></label><label>Election ends<input type="datetime-local" value={scheduleDraft.end} onChange={(event) => setScheduleDraft((current) => ({ ...current, end: event.target.value }))} required /></label><p className="settings-hint"><Icon name="shield" size={16} /> Applications close 24 hours before the election starts. Voting then opens and closes at the saved times. Cancellation is only available until one hour before voting starts.</p><button className="button button--primary" type="submit">Save election schedule</button></form></section>}
+            {adminTab === "Results & reports" && <section className="admin-card report-card"><div className="admin-card-heading"><div><h2>Election results &amp; reports</h2><p>Local demo totals by position.</p></div><button className="button button--primary print-button" onClick={() => window.print()}><Icon name="print" size={16} /> Print report</button></div><div className="report-table-wrap"><table className="data-table"><thead><tr><th>Position</th><th>Candidate</th><th>Votes</th><th>Percentage</th></tr></thead><tbody>{positions.flatMap((position) => {
+              const positionCandidates = candidates.filter((candidate) => candidate.position === position);
+              const positionVotes = positionCandidates.reduce((total, candidate) => total + (voteCounts[candidate.id] || 0), 0);
+              return positionCandidates.length ? positionCandidates.map((candidate) => <tr key={candidate.id}><td>{position}</td><td><strong>{candidate.name}</strong></td><td>{(voteCounts[candidate.id] || 0).toLocaleString()}</td><td>{positionVotes ? `${((voteCounts[candidate.id] || 0) / positionVotes * 100).toFixed(1)}%` : "—"}</td></tr>) : [<tr key={position}><td>{position}</td><td>No approved candidates</td><td>0</td><td>—</td></tr>];
+            })}</tbody></table></div><p className="report-note">Polling-station breakdown is not available in this browser demo.</p></section>}
           </section>
         </main>
       )}
       </div>
-      {page !== "home" && <footer className="simple-footer"><span>University E-Voting</span><span>Your voice. Our university.</span>{page === "admin" ? <span>© 2026</span> : <button onClick={() => navigate("admin")}>NEC admin <Icon name="arrow" size={14} /></button>}</footer>}
+      {page !== "home" && <footer className="simple-footer"><span>University E-Voting</span><span>Local demo · data stays in this browser.</span><span>© 2026</span></footer>}
     </div>
   );
 }

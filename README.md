@@ -17,4 +17,8 @@ The GitHub Actions workflow builds the app with the `/uniE-voting/` base path an
 
 ## Demo behavior
 
-This is a frontend-only prototype. Election schedule, applications, approvals, and ballots are held in browser memory and are not shared with other users or persisted to a server. The live trend is simulated; connect an authenticated backend before using this for a real election.
+This is a frontend-only prototype. Election schedule, applications, approvals, and demo ballot totals are saved in the current browser's local storage; they are not shared with other browsers or devices. The registered-voter total is sample data, while trends and candidate results are calculated only from ballots recorded in this browser.
+
+There is no sign-in or role authorization. Local browser storage can be edited or cleared, so this demo must not be used to run a real election or to protect real voter identities and ballots.
+
+To restart the demo, clear this site's local storage in the browser's developer tools.
